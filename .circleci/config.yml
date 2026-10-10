@@ -1,0 +1,48 @@
+version: 2.1
+
+orbs:
+  github-cli: circleci/github-cli@2.2.0
+
+jobs:
+  build_app:
+    docker:
+      - image: cimg/python:3.10.0
+    steps:
+      - checkout
+      - run:
+          name: Install Dependencies
+          command: pip install -r requirements.txt
+      - run:
+          name: Build Executable
+          command: pyinstaller --onefile app.py
+      # Saves the compiled app so the deployment job can access it after the manual hold
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist/app
+
+  deploy_to_production:
+    docker:
+      - image: cimg/python:3.10.0
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - github-cli/setup
+      - run:
+          name: Create GitHub Release
+          command: |
+            TAG="v1.0.${CIRCLE_BUILD_NUM}"
+            gh release create "$TAG" dist/app -t "AI Assistant $TAG" -n "Automated production release approved via CircleCI pipeline."
+
+workflows:
+  main-workflow:
+    jobs:
+      - build_app
+      - hold_for_release:
+          type: approval
+          requires:
+            - build_app
+      - deploy_to_production:
+          requires:
+            - hold_for_release
