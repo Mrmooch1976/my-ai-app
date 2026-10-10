@@ -12,3 +12,4 @@ A command-line AI toolkit for managing daily nutrition, fitness, and budgets.
 export OPENAI_API_KEY="your-api-key-here"
 chmod +x app
 ./app
+```
